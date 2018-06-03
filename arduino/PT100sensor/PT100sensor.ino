@@ -1,5 +1,5 @@
-/*SPI:   10 (SS),   11 (MOSI),   12 (MISO),   13 (SCK). 
-         PB2        PB3          PB4          PB5
+/*SPI:   10 (SS)   -   11 (MOSI)    -      12 (MISO)    -      13 (SCK). 
+           PB2     -      PB3       -         PB4       -       PB5
 These pins support SPI communication, 
 which, although provided by the underlying hardware, 
 is not currently included in the Arduino language.
@@ -43,9 +43,13 @@ word readBuffer= 0x00;
 int  zTime, cTime, pTime = 0;
 int loopCounter = 0;
 
+int speakerPin= A0;
+int speakerFreq= 200;
+
 void setup()
 {
   initMessages();
+  pinMode(speakerPin, OUTPUT);
   SPI.begin();
   SPI.beginTransaction(settings);
   Serial.begin(9600);
@@ -67,7 +71,7 @@ void setup()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
-// ~~~~~~~~~~~~~~~~~~ LOOP ~~~~~~~~~~~~~~~~~~ //
+// ~~~~~~~~~~~~~~~~~ L O O P ~~~~~~~~~~~~~~~~ //
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
 void loop() 
@@ -92,6 +96,7 @@ void loop()
     PORTB= PORTB | SS_PORT;    // HIGH
     sensorLowByte= sensorLowByte & DATA_MASK;
     
+    
     // combine bytes
     sensorValue= sensorHighByte;
     sensorValue= sensorValue << 8;
@@ -99,17 +104,27 @@ void loop()
     sensorValue= sensorValue >> 1;
     
     mappedSensorValue =  ((float)sensorValue/32)-256;
-    Serial.println(sensorValue);
-//  Serial.println();
+   Serial.println(sensorValue);
 
-      pTime= millis();
-      loopCounter++;
+//    if (17800 > sensorValue || sensorValue > 18200) {
+//      Serial.print(" > ERROR DETECTED: ");
+//      Serial.print(sensorValue);
+//      Serial.print("\n\r");
+//    }
+    speakerFreq = (float) (mappedSensorValue*10) + 200;
+    tone(speakerPin, speakerFreq);
+
+    pTime= millis();
+    loopCounter++;
   }
   
 }
 
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+// ~~~~~~~~~~~~~ F U N C T I O N S ~~~~~~~~~~~~~ //
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+
 void initMessages(){
   // initiate read high byte message
   READ_HIGH_BYTE = READ_HIGH_BYTE | RTD_HIGH_BYTE_ADRESS;
@@ -128,9 +143,7 @@ void initMessages(){
   READ_CONFIG = READ_CONFIG | CONFIG_READ_ADRESS;
   READ_CONFIG = READ_CONFIG << 8;
   READ_CONFIG = READ_CONFIG | RECIEVE_BYTE;
-  
-//  Serial.println("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-");
-//  
+
 //  Serial.print("READ_HIGH_BYTE: ");
 //  Serial.print(READ_HIGH_BYTE, BIN);
 //  Serial.print("\n\r");
@@ -169,4 +182,5 @@ void spiWrite(unsigned int writeBuff){
   PORTB= PORTB | SS_PORT;    // HIGH
 
 };
+
 

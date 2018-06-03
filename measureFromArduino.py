@@ -9,6 +9,10 @@ SAMPLE_FREQ = 50
 SAMPLE_TIME = 0.02
 SAMPLE_TIME_MS = 20
 
+ERROR_TEMP_MIN = 0
+ERROR_TEMP_MAX = 60
+
+
 ser= serial.Serial("/dev/tty.usbserial-A904OSQG", 9600)
 ser.close()
 ser.open()
@@ -24,52 +28,61 @@ i=0
 
 def getSample():
 	datain =  ser.readline() 
-	datain = datain.replace("\r", "")
-	datain = datain.replace("\n", "")
-	
-	mappedSensorValue =  (float(int(datain))/32)-256
-	return mappedSensorValue
-	#print datain
-	#print mappedSensorValue
+	if datain.count("\r") <= 1 and datain.count("\n") <= 1:
+		datain = datain.replace("\r", "")
+		datain = datain.replace("\n", "")
+		mappedSensorValue =  (float(int(datain))/32)-256
+
+		print " > raw input: ", datain
+		print " > mapped input: ", mappedSensorValue, " [CELSIUS]"
+
+	else: 
+		print " > DOUBLE/INCOMPLETE MESSAGE"
+		print "  > r: ", datain.count("\r")
+		print "  > n: ", datain.count("\n")
+		return 0
+
+	if mappedSensorValue > ERROR_TEMP_MIN and mappedSensorValue < ERROR_TEMP_MAX:
+		return mappedSensorValue
+	else:
+		print " > FAULTY VALUE"
+		print "  > datain: ", datain
+		print "  > mappedSensorValue: ", mappedSensorValue
+		print "  > r: ", datain.count("\r")
+		print "  > n: ", datain.count("\n")
+		return 0
 
 def animate():
 	global i, buff
-
 	val = getSample()
 	xval = float(i*SAMPLE_TIME)
-
-	print (val)
-
 	xs.append(xval)
 	ys.append(val)
 	buff.append(val)
 
-	#if mappedSensorValue < 150 and mappedSensorValue > -30:
 	ax1.clear()
 	ax1.plot(xs, ys)
+	ax1.grid(True)
 	plt.pause(0.001)
-	
-	# else : 
-	# 	mappedSensorValue = float('nan')
-	# 	print "incorrect measurement", datain
 
 	i+= 1
 
 mBool = True
 
 # ani = animation.FuncAnimation(fig, animate, frames = 1000)
-
+# if raw_input(" Make sure the right COM port is selected in line 16, \n \r")
 nSamples = int(raw_input("> How many samples to take? (@50Hz) : "))
 
-print "> reset the arduino to start measurement,"
-print "  this might take multiplt tries"
+print "> reset the arduino to start measurement, this might take multiple tries... "
 
 while mBool:
 
 	msg = ser.readline()
 	if msg == "GO\r\n":
-		print "start measurement"
+		print "> start measurement"
 		for n in range(nSamples):
+			print '> sample #', n+1, ': '
+			print " > time: ", (n)*SAMPLE_TIME, " [SECONDS]"
 			animate()
 		mBool = False
 
